@@ -1,7 +1,7 @@
 #!/usr/bin/python
 #Oct 12, 2015
-#Make FASTA file from gtf and genome sequence file
-#
+#Make FASTA file of translated transcripts using gff and genome file
+#Incorporate AS info and track changes to proteins caused by splicing
 
 #Imports
 import re
@@ -196,7 +196,7 @@ def Load_splices(splfile):
       if "gene_name" in str(line): #header line
         pass
       else:
-        fline = [n for n in line.strip().split('	')]
+        fline = [n for n in line.strip().split()] #split('	')
         #does not currently deal with unknown number of data fields
         #gid,score,jnum,jtype,a1,n1,a2,n2,a3,n3,a4,n4,a5,n5,postype=fline
         splices.append(fline) #append tuple of line to list
@@ -226,7 +226,7 @@ def check_junc(n1,n2,jtype): ###Haven't implemented this function yet (Jan 13 '1
 def deal_with_splice(alist,exons):
   '''Takes splice event list and list of exons (tuples) and modifies exons involved in AS'''
   unk,newex={},[]
-  print alist[0]
+  #print alist[0]
   if 'IR' in alist[3]: #intron retention
     junc=alist[2].split('-') #split junction number ie."2-3"
     #print exons
@@ -291,39 +291,11 @@ def gff_plus_splice(spl,annt):
             else:
               newgff[k][l]=[newex]
               #print "First time in newgff",'\n',newgff[k][l]
+#  for k,v in newgff.iteritems():
+#    if v:
+#      print k,":",v
+  return newgff
 
-###(Jan15) Need to finish (below) to add new exons to list and then into nested dict
- #         if [item for item in genes if item[0] == l]: #if gene in list, name should be first item of tuple
- #           newname=str(nm[0])+'_'+str(int(nm[1])+1)
- #           mytup=([newname]+newex) #add lists inside tuple
- #           genes.append(mytup)
- #         else: #add to list for first time
- #           newname=str(l)+'_'+str(1) #start naming gene with '_1' '_2' etc
- #           try:
- #             mytup=([newname]+newex) #add name and list of exons into one tuple
- #           except TypeError:
- #             print newname,'\n',newex,'\n',i
- #             sys.exit(0)
- #           genes.append(mytup)
- #         newgff[k][l]=(newname,newex) #
-          #
-
-          #print i[0],i[-1],type(i[-1].split(":")[0])
-         # mynum1,mynum2=i[-1].split(":")[0],i[-1].split(":")[1] #location of AS event beg./end
-         # exonid=min([x[0] for x in glist], key=lambda x:abs(x-mynum1)) #find nearest match to v[0] in list of tuples
-         # print exonid
-          ##print l,m,'\n',i
-          #have one line slice info (i) and list (m) of all gene annotation info
-
-          #exonid=min([x[0] for x in m], key=lambda x:abs(x-mynum))
-          #m[exonid]
-          #newgff[k][l]=
-          #tmplist.append(i) #append spl info to temp list
-    ###at end of each genes' loop, modify annotation
-  print "gff_plus_splice dict"
-  for k,v in newgff.iteritems():
-    if v:
-      print k,":",v
 
 def Output(adict,output):
   outfile=open(output,'w')
@@ -377,4 +349,34 @@ for k, v in seqs.items():
   else:
     p=max(store,key=len)
     print p,len(p)
+
+
+###(Jan15) Need to finish (below) to add new exons to list and then into nested dict
+ #         if [item for item in genes if item[0] == l]: #if gene in list, name should be first item of tuple
+ #           newname=str(nm[0])+'_'+str(int(nm[1])+1)
+ #           mytup=([newname]+newex) #add lists inside tuple
+ #           genes.append(mytup)
+ #         else: #add to list for first time
+ #           newname=str(l)+'_'+str(1) #start naming gene with '_1' '_2' etc
+ #           try:
+ #             mytup=([newname]+newex) #add name and list of exons into one tuple
+ #           except TypeError:
+ #             print newname,'\n',newex,'\n',i
+ #             sys.exit(0)
+ #           genes.append(mytup)
+ #         newgff[k][l]=(newname,newex) #
+          #
+
+          #print i[0],i[-1],type(i[-1].split(":")[0])
+         # mynum1,mynum2=i[-1].split(":")[0],i[-1].split(":")[1] #location of AS event beg./end
+         # exonid=min([x[0] for x in glist], key=lambda x:abs(x-mynum1)) #find nearest match to v[0] in list of tuples
+         # print exonid
+          ##print l,m,'\n',i
+          #have one line slice info (i) and list (m) of all gene annotation info
+
+          #exonid=min([x[0] for x in m], key=lambda x:abs(x-mynum))
+          #m[exonid]
+          #newgff[k][l]=
+          #tmplist.append(i) #append spl info to temp list
+    ###at end of each genes' loop, modify annotation
 '''
