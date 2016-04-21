@@ -279,8 +279,7 @@ def gff_plus_splice(spl,annt):
         if l==i[0]: #if gene names match, modify annotation
           glist=[m[t:t+3] for t in range(0,len(m),3)] #turns flat list into list of tuples for exons
           ##Not all splice descriptions have position info
-          #switch exon order for '-' strand genes
-          if glist[0][2]=='-': #neg strand
+          if glist[0][2]=='-': #switch exon order for '-' strand genes
             glist=glist[::-1] #remember: newex will be in reverse order
           newex=deal_with_splice(i,glist) #input splice line and exon tuples, gives new modified exon
       #    print i,'\n',newex
