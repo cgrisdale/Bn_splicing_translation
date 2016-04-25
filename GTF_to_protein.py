@@ -14,8 +14,26 @@ import warnings
 from Bio import BiopythonWarning
 warnings.simplefilter('ignore', BiopythonWarning)
 ########## Support Functions #########
+def calc_min(alist,anum): ##in progress
+  minl=[]
+  for x in alist:
+    n=x[0]
+    minl.append(n-anum)
+  return min(minl)
 
-  
+def check_junc(n1,n2,jtype): ###Haven't implemented this function yet (Jan 13 '16)
+  '''Check to make sure junc numbers make sense'''
+  diff=abs(n1-n2)
+  if jtype=='IR' or jtype=='ALT':
+    if diff==1:
+      pass
+    else:
+      print "Error in junction numbering, should be == 1"
+  elif jtype=='SK':
+    if diff>1:
+      pass
+    else:
+      print "Error in junction numbering, should be >1 for SKIP"
 ######### Functions #########
 
 def open_genome(gen):
@@ -81,7 +99,6 @@ def gtfingene(gtffile,filetype):
           pass
   print '\033[92mTotal Chromosomes Added\033[0m.....', len(GTF_Genes)
   print '\033[92mTotal Gene Lines Added\033[0m....\033[0m',sum([len(x) for x in GTF_Genes.values()])
-  #print GTF_Genes
   return GTF_Genes
   
 def Extractor(Genome,GeneDict):
@@ -94,8 +111,10 @@ def Extractor(Genome,GeneDict):
     try:
       Sequence,Genes,curgene = v.seq.upper(),GeneDict[k],[] #get gene info for current chromosome
       for gname, locus in Genes.items(): #for each gene (which has multiple exons)
+        #print gname, locus
         for i in range(0,len(locus),3): #Go through exons
-        #print gname,locus[i],locus[i+1],locus[i+2]
+          #print gname,locus[i],locus[i+1],locus[i+2]
+          #sys.exit(0)
           coords1,coords2,strand = locus[i],locus[i+1],locus[i+2]
           if i == 0: #first time through loop
             GeneSeq = SeqRecord(Sequence[(coords1-1):coords2],name=gname)
@@ -115,27 +134,6 @@ def Extractor(Genome,GeneDict):
   print '\033[92mGenes Indexed\033[0m...',len(Flipper)
   #print Flipper,[v.seq for k,v in Flipper.items()]
   return Flipper
-
-def get_protein(record): #not currently being used
-  '''Extract amino acid sequence from SeqRecord'''
-  minlen=1
-  for strand, nuc in [(+1, record.seq), (-1, record.seq.reverse_complement())]:
-    prolist=[]
-    for frame in range(3):
-      length=3*((len(record)-frame)//3)
-      for pro in nuc[frame:frame+length].translate().split("*"):
-        if len(pro) >= minlen: #and pro[0]=='M':
-          info=(pro,len(pro),strand,frame)
-          prolist.append(info)
-          #print pro[:30],"...",pro[-3:]," - ",len(pro),strand,frame
-    for n in prolist:
-      a=re.findall('M.*',str(n[0]))
-      if a:
-        a=Seq(a)
-        print a
-      #for a,b,c,d in n:
-        #print a,b,c,d
-  #print prolist
 
 def find_orfs_with_trans(seq, trans_table, min_protein_length):
     answer = []
@@ -202,27 +200,6 @@ def Load_splices(splfile):
         splices.append(fline) #append tuple of line to list
   return splices
 
-def calc_min(alist,anum): ##in progress
-  minl=[]
-  for x in alist:
-    n=x[0]
-    minl.append(n-anum)
-  return min(minl)
-
-def check_junc(n1,n2,jtype): ###Haven't implemented this function yet (Jan 13 '16)
-  '''Check to make sure junc numbers make sense'''
-  diff=abs(n1-n2)
-  if jtype=='IR' or jtype=='ALT':
-    if diff==1:
-      pass
-    else:
-      print "Error in junction numbering, should be == 1"
-  elif jtype=='SK':
-    if diff>1:
-      pass
-    else:
-      print "Error in junction numbering, should be >1 for SKIP"    
-
 def deal_with_splice(alist,exons):
   '''Takes splice event list and list of exons (tuples) and modifies exons involved in AS'''
   unk,newex={},[]
@@ -282,20 +259,48 @@ def gff_plus_splice(spl,annt):
           if glist[0][2]=='-': #switch exon order for '-' strand genes
             glist=glist[::-1] #remember: newex will be in reverse order
           newex=deal_with_splice(i,glist) #input splice line and exon tuples, gives new modified exon
-      #    print i,'\n',newex
           if newex: #if new exons returned from "deal_with_splices"
+            if newex[0][2]=='-': #if minus strand gene, put exons back in ascending order
+              newex=newex[::-1]
             if l in newgff[k]:
               #create dict values with lists of tuples for each transcript isoform
               newgff[k][l]=newgff[k][l]+[newex] #same order as splice event info
-              #print "Already in newgff",'\n',newgff[k][l]
             else:
               newgff[k][l]=[newex]
-              #print "First time in newgff",'\n',newgff[k][l]
 #  for k,v in newgff.iteritems():
 #    if v:
 #      print k,":",v
   return newgff
 
+def translate_AS_txn(genome,mgff):
+  '''Run translations for all AS-modified transcripts'''
+  Flipper,curchrm = {},''
+  for k, v in genome.items():
+    newchrm=k
+    try:
+      Sequence,Genes,curgene = v.seq.upper(),mgff[k],[] #get gene info for current chromosome
+      for gname, locus in Genes.items(): #for each gene (which has multiple exons)
+        #print gname, locus
+        for i in range(0,len(locus),3): #Go through exons
+          #print gname,locus[i],locus[i+1],locus[i+2]
+          #sys.exit(0)
+          coords1,coords2,strand = locus[i],locus[i+1],locus[i+2]
+          if i == 0: #first time through loop
+            GeneSeq = SeqRecord(Sequence[(coords1-1):coords2],name=gname)
+          #print gname,len(Sequence[(coords1-1):coords2]),len(GeneSeq.seq),GeneSeq.seq[0:3],GeneSeq.seq[-3:]
+          else: #not first iteration
+            GeneSeq = GeneSeq+Sequence[(coords1-1):coords2]
+        if strand == "+": #deal with strand info after looping through exons
+          Flipper[gname] = GeneSeq
+        elif strand == '-':
+          Reverse = GeneSeq.reverse_complement()#Get RvComp of SeqRecord
+	  Flipper[gname] = Reverse
+        else:
+          print "Incorrect strand info!!!"
+    except KeyError:
+      pass
+    curchrm=k
+  print "Done AS translations"
 
 def Output(adict,output):
   outfile=open(output,'w')
@@ -309,6 +314,12 @@ def Output(adict,output):
 if __name__ == '__main__':
   starttime=time.time()
   #Intialized variables...
+  if len(sys.argv)==6:
+    pass
+  else:
+    print "Incorrect number of input files"+'\n'+"Usage: python GTF_to_protein.py gtf/gff genome annotation splice output"
+    print "Arguments give: "+str(len(sys.argv))+" not equal to 6 (filename + 5 in/out files)"
+    sys.exit(0)
   filetype=sys.argv[1]
   thegenome = sys.argv[2]
   gtffile = sys.argv[3]
@@ -322,12 +333,14 @@ if __name__ == '__main__':
   #print '\033[93mExtracting Genes from Genome\033[0m...'
   seqs=Extractor(Genome,GENES)
   pro=Filter_proteins(seqs)
-  print '\033[93mRun analysis for splice-modified annotations\033[0m...'
+  #print '\033[93mRun analysis for splice-modified annotations\033[0m...'
   splices=Load_splices(splicefile)
-  gff_plus_splice(splices,GENES) #run Extractor and Filter_proteins on output gff of spliced modified txn
+  ASgff=gff_plus_splice(splices,GENES) #run Extractor and Filter_proteins on output gff of spliced modified txn
   #Output protein sequences to file and logs errors to another file
   Output(pro,outputfile)
   ##Need another output for sequences after splice modifications
+  translate_AS_txn(Genome,ASgff)
+
   endtime=(time.time()-starttime)
   print "Script run-time (sec): ",endtime
 
