@@ -280,16 +280,28 @@ def translate_AS_txn(genome,mgff):
     try:
       Sequence,Genes,curgene = v.seq.upper(),mgff[k],[] #get gene info for current chromosome
       for gname, locus in Genes.items(): #for each gene (which has multiple exons)
-        #print gname, locus
-        for i in range(0,len(locus),3): #Go through exons
+        for x in range(0,len(locus)): #for each set of AS transcripts
+	  gname=gname+'_'+str(x)
+	  print gname
+	  for y in range(0,len(locus[x])):
+	    coords1,coords2,strand = locus[x][y][0],locus[x][y][1],locus[x][y][2]
+	    print coords1,coords2,strand
+	    if y == 0: #first time through loop
+	      GeneSeq = SeqRecord(Sequence[(coords1-1):coords2],name=gname)
+	      #print GeneSeq
+	    else: #not first iteratio
+	      GeneSeq = GeneSeq+Sequence[(coords1-1):coords2]
+	  print gname,GeneSeq
+	  sys.exit(0)
+      #  for i in range(0,len(locus),3): #Go through exons
           #print gname,locus[i],locus[i+1],locus[i+2]
           #sys.exit(0)
-          coords1,coords2,strand = locus[i],locus[i+1],locus[i+2]
-          if i == 0: #first time through loop
-            GeneSeq = SeqRecord(Sequence[(coords1-1):coords2],name=gname)
+      #    coords1,coords2,strand = locus[i],locus[i+1],locus[i+2]
+      #    if i == 0: #first time through loop
+      #      GeneSeq = SeqRecord(Sequence[(coords1-1):coords2],name=gname)
           #print gname,len(Sequence[(coords1-1):coords2]),len(GeneSeq.seq),GeneSeq.seq[0:3],GeneSeq.seq[-3:]
-          else: #not first iteration
-            GeneSeq = GeneSeq+Sequence[(coords1-1):coords2]
+      #    else: #not first iteration
+      #      GeneSeq = GeneSeq+Sequence[(coords1-1):coords2]
         if strand == "+": #deal with strand info after looping through exons
           Flipper[gname] = GeneSeq
         elif strand == '-':
