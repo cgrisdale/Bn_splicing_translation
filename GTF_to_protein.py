@@ -281,38 +281,31 @@ def translate_AS_txn(genome,mgff):
       Sequence,Genes,curgene = v.seq.upper(),mgff[k],[] #get gene info for current chromosome
       for gname, locus in Genes.items(): #for each gene (which has multiple exons)
         for x in range(0,len(locus)): #for each set of AS transcripts
-	  gname=gname+'_'+str(x)
-	  print gname
-	  for y in range(0,len(locus[x])):
+	  gname1=gname+'_'+str(x+1)
+	  #print gname
+	  for y in range(0,len(locus[x])): #for exons in each AS transcript
 	    coords1,coords2,strand = locus[x][y][0],locus[x][y][1],locus[x][y][2]
-	    print coords1,coords2,strand
+	    #print coords1,coords2,strand
 	    if y == 0: #first time through loop
-	      GeneSeq = SeqRecord(Sequence[(coords1-1):coords2],name=gname)
+	      GeneSeq = SeqRecord(Sequence[(coords1-1):coords2],name=gname1)
 	      #print GeneSeq
 	    else: #not first iteratio
 	      GeneSeq = GeneSeq+Sequence[(coords1-1):coords2]
-	  print gname,GeneSeq
-	  sys.exit(0)
-      #  for i in range(0,len(locus),3): #Go through exons
-          #print gname,locus[i],locus[i+1],locus[i+2]
-          #sys.exit(0)
-      #    coords1,coords2,strand = locus[i],locus[i+1],locus[i+2]
-      #    if i == 0: #first time through loop
-      #      GeneSeq = SeqRecord(Sequence[(coords1-1):coords2],name=gname)
-          #print gname,len(Sequence[(coords1-1):coords2]),len(GeneSeq.seq),GeneSeq.seq[0:3],GeneSeq.seq[-3:]
-      #    else: #not first iteration
-      #      GeneSeq = GeneSeq+Sequence[(coords1-1):coords2]
-        if strand == "+": #deal with strand info after looping through exons
-          Flipper[gname] = GeneSeq
-        elif strand == '-':
-          Reverse = GeneSeq.reverse_complement()#Get RvComp of SeqRecord
-	  Flipper[gname] = Reverse
-        else:
-          print "Incorrect strand info!!!"
+          if strand == "+": #deal with strand info after looping through exons
+            Flipper[gname1] = GeneSeq
+          elif strand == '-':
+            Reverse = GeneSeq.reverse_complement()#Get RvComp of SeqRecord
+            Flipper[gname1] = Reverse
+          else:
+            print "Incorrect strand info!!!"
+	  #print Flipper
+	  #sys.exit(0)
     except KeyError:
+      print "KeyError in Translate_AS_txn",newchrm
       pass
     curchrm=k
-  print "Done AS translations"
+  print "Done AS transriptions"
+  return Flipper
 
 def Output(adict,output):
   outfile=open(output,'w')
@@ -322,6 +315,22 @@ def Output(adict,output):
       outfile.write(myline)
     except TypeError:
       print k,v
+
+def check_ASproteins(astx,tx,output):
+  '''Read in canonical protein dict and AS protein dict, compare lengths and output to file'''
+  outfile=open(output,'w')
+  for k,v in sorted(astx.items()):
+    gene=k.split('_')[0]
+    #print k,v[1]
+    try:
+      aachg=str(v[1]-tx[gene][1])
+      percchg=str(((v[1]-tx[gene][1])/(tx[gene][1]*1.0))*100)
+      aacan,aanew=str(tx[gene][1]),str(v[1])
+      result=k+' '+aacan+' '+aanew+' '+aachg+' '+percchg+'\n'
+      outfile.write(result)
+      #print k,gene,"Amino acid changes:",str(v[1]-tx[gene][1]),"Proportion of length difference:",str((v[1]-tx[gene][1])/(tx[gene][1])*100.0) #calculate difference between canonical and AS transcripts
+    except KeyError:
+      print "KeyError: AS gene name doesn't exist in standard gene/protein dictionary"
 
 if __name__ == '__main__':
   starttime=time.time()
@@ -349,9 +358,11 @@ if __name__ == '__main__':
   splices=Load_splices(splicefile)
   ASgff=gff_plus_splice(splices,GENES) #run Extractor and Filter_proteins on output gff of spliced modified txn
   #Output protein sequences to file and logs errors to another file
-  Output(pro,outputfile)
+#  Output(pro,outputfile)
   ##Need another output for sequences after splice modifications
-  translate_AS_txn(Genome,ASgff)
+  ASseqs=translate_AS_txn(Genome,ASgff)
+  ASpro=Filter_proteins(ASseqs)
+  check_ASproteins(ASpro,pro,outputfile)
 
   endtime=(time.time()-starttime)
   print "Script run-time (sec): ",endtime
