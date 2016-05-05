@@ -13,6 +13,7 @@ from Bio import SeqIO
 import warnings
 from Bio import BiopythonWarning
 warnings.simplefilter('ignore', BiopythonWarning)
+
 ########## Support Functions #########
 def calc_min(alist,anum): ##in progress
   minl=[]
@@ -34,6 +35,7 @@ def check_junc(n1,n2,jtype): ###Haven't implemented this function yet (Jan 13 '1
       pass
     else:
       print "Error in junction numbering, should be >1 for SKIP"
+
 ######### Functions #########
 
 def open_genome(gen):
@@ -172,10 +174,12 @@ def Filter_proteins(proteins):
       if a:
         store=store+a
       #print("%s...%s - length %i, strand %i, %i:%i" % (pro[:30], pro[-3:], len(pro), strand, start, end))
+    for x in store:
+      print len(x),x[0:10],x[-10:] ###de-bugging###
     if len(store)==1:
       prot[k]=(store[0],len(store[0]))
     elif len(store)>1:
-      p=max(store,key=len)
+      p=max(store,key=len) #keeps the longest ORF, might need to change this! How to get first ORF???
       prot[k]=(p,len(p))
     else: #empty protein list
       towrite=k+str(store)
@@ -224,7 +228,8 @@ def deal_with_splice(alist,exons):
     #ATLA left coordinate is new, ALTD right coord is new
     junc=alist[2].split('-')
     if 'ALTA' in alist[3]:
-      print "ALTA",junc
+      pass
+      #print "ALTA",junc
     #  j1,j2=exons[int(junc[0])-1][0],exons[int(junc[1])-1][1]
     #  new=(j1,j2,exons[0][2]) #new exon tuple
     #  pos1,pos2=int(junc[0])-1,int(junc[1])
@@ -232,11 +237,11 @@ def deal_with_splice(alist,exons):
     #  exons.insert(pos1,new) #insert new exon tuple where two exons used to exist
     #  return exons #returns whole list of exons with modification
     elif alist[3].startswith("ALTD"):
-      print "ALTD",junc
-      #
+      #print "ALTD",junc
+      pass
     elif alist[3].startswith("ALTP"):
-      print "ALTP",junc
-      #
+      #print "ALTP",junc
+      pass
   elif alist[3].startswith("SK"): #SKIP SKAT SKAD etc
     junc=alist[2].split('-')
     
@@ -285,7 +290,7 @@ def translate_AS_txn(genome,mgff):
 	  #print gname
 	  for y in range(0,len(locus[x])): #for exons in each AS transcript
 	    coords1,coords2,strand = locus[x][y][0],locus[x][y][1],locus[x][y][2]
-	    #print coords1,coords2,strand
+	    print gname1,coords1,coords2,strand
 	    if y == 0: #first time through loop
 	      GeneSeq = SeqRecord(Sequence[(coords1-1):coords2],name=gname1)
 	      #print GeneSeq
@@ -301,10 +306,13 @@ def translate_AS_txn(genome,mgff):
 	  #print Flipper
 	  #sys.exit(0)
     except KeyError:
-      print "KeyError in Translate_AS_txn",newchrm
+      #print "KeyError in Translate_AS_txn",newchrm #show scaffold where gene absent...
       pass
     curchrm=k
   print "Done AS transriptions"
+  #for k,v in Flipper.items():
+  #  print k,v.seq
+  #print [v.seq for k,v in Flipper.items()]
   return Flipper
 
 def Output(adict,output):
@@ -328,6 +336,7 @@ def check_ASproteins(astx,tx,output):
       aacan,aanew=str(tx[gene][1]),str(v[1])
       result=k+' '+aacan+' '+aanew+' '+aachg+' '+percchg+'\n'
       outfile.write(result)
+      print k,'\n',v,'\n',tx[gene],'\n'
       #print k,gene,"Amino acid changes:",str(v[1]-tx[gene][1]),"Proportion of length difference:",str((v[1]-tx[gene][1])/(tx[gene][1])*100.0) #calculate difference between canonical and AS transcripts
     except KeyError:
       print "KeyError: AS gene name doesn't exist in standard gene/protein dictionary"
